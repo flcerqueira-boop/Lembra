@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#EAEFEC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14191C" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Lembra">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<title>Lembra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EAEFEC; --surface:#F7F9F8; --ink:#1D2830; --muted:#647379; --line:#D3DCD8;
+  --accent:#F4C21B; --accent-ink:#1D2830; --done:#8FA39A; --error:#B3261E;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#14191C; --surface:#1C2328; --ink:#E4EBE8; --muted:#8A989D; --line:#2C363C;
+    --accent:#F4C21B; --accent-ink:#14191C; --done:#5E7068; --error:#F2B8B5;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Atkinson Hyperlegible",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  font-size:18px; line-height:1.4; -webkit-tap-highlight-color:transparent;
+  padding-top:env(safe-area-inset-top,0px);
+}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+.wrap{max-width:640px;margin:0 auto;padding:0 20px}
+
+/* Cabeçalho */
+header{display:flex;align-items:flex-start;justify-content:space-between;padding:28px 0 18px}
+.day{font-size:34px;font-weight:700;letter-spacing:-.5px;line-height:1.1}
+.sub{color:var(--muted);margin-top:6px}
+.icon-btn{background:none;border:0;padding:10px;margin:-6px -10px 0 0;border-radius:12px;color:var(--muted)}
+
+/* Lista */
+main{padding-bottom:calc(130px + env(safe-area-inset-bottom,0px))}
+ul{list-style:none;padding:0}
+.task{
+  display:flex;align-items:flex-start;gap:14px;width:100%;
+  padding:16px 2px;background:none;border:0;border-bottom:1px solid var(--line);
+  text-align:left;
+}
+.ring{
+  flex:none;width:26px;height:26px;margin-top:1px;border-radius:50%;
+  border:2px solid var(--muted);display:grid;place-items:center;
+  transition:background .2s,border-color .2s;
+}
+.ring svg{opacity:0;transition:opacity .2s}
+.txt{overflow-wrap:anywhere}
+.task.done .ring{background:var(--accent);border-color:var(--accent)}
+.task.done .ring svg{opacity:1}
+.task.done .txt{text-decoration:line-through;color:var(--done)}
+.task.done{animation:out .35s .2s forwards}
+@keyframes out{to{opacity:0;transform:translateX(28px)}}
+.empty{padding:48px 0;color:var(--muted);max-width:28ch}
+.empty strong{display:block;color:var(--ink);font-size:22px;margin-bottom:6px}
+
+/* Campo de entrada fixo embaixo */
+.composer{
+  position:fixed;left:0;right:0;bottom:0;background:var(--surface);
+  border-top:1px solid var(--line);
+  padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px));
+}
+.composer .wrap{display:flex;gap:12px;align-items:center}
+.field{
+  flex:1;min-width:0;font:inherit;font-size:18px;padding:15px 16px;
+  border-radius:16px;border:1px solid var(--line);background:var(--bg);color:var(--ink);
+}
+.field::placeholder{color:var(--muted)}
+.mic{
+  flex:none;width:62px;height:62px;border-radius:50%;border:0;
+  background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;
+  box-shadow:0 0 0 0 rgba(244,194,27,.55);
+}
+.mic.listening{animation:pulse 1.3s ease-out infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(244,194,27,.55)}100%{box-shadow:0 0 0 18px rgba(244,194,27,0)}}
+
+/* Aviso com desfazer */
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(104px + env(safe-area-inset-bottom,0px));
+  background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 16px;
+  display:flex;gap:18px;align-items:center;width:max-content;max-width:calc(100% - 32px);
+  font-size:16px;
+}
+.toast button{background:none;border:0;color:var(--accent);font-weight:700;padding:4px}
+
+/* Ajustes */
+dialog{
+  border:0;border-radius:22px;padding:24px;width:min(420px,calc(100% - 32px));
+  background:var(--surface);color:var(--ink);
+}
+dialog::backdrop{background:rgba(10,14,16,.45)}
+dialog h2{font-size:24px;margin-bottom:16px}
+.row{padding:14px 0;border-top:1px solid var(--line)}
+.row p{color:var(--muted);font-size:16px;margin-top:4px}
+.btn{
+  display:block;width:100%;margin-top:12px;padding:14px;border-radius:14px;border:0;
+  background:var(--accent);color:var(--accent-ink);font-weight:700;
+}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);font-weight:400}
+.status{font-weight:700;margin-top:10px}
+
+/* Entrar */
+.login{min-height:100%;display:flex;flex-direction:column;justify-content:center;padding:40px 0}
+.login h1{font-size:44px;letter-spacing:-1px}
+.login > .wrap > p{color:var(--muted);margin:6px 0 28px}
+.login label{display:block;font-size:16px;color:var(--muted);margin:14px 0 6px}
+.login .field{width:100%}
+.err{color:var(--error);font-size:16px;margin-top:12px;min-height:1.4em}
+
+@media (prefers-reduced-motion: reduce){
+  .mic.listening{animation:none;outline:4px solid var(--accent);outline-offset:4px}
+  .task.done{animation-duration:.01s}
+}
+</style>
+</head>
+<body>
+
+<!-- Tela de entrada -->
+<section id="loginView" class="login" hidden>
+  <div class="wrap">
+    <h1>Lembra</h1>
+    <p>Suas tarefas no iPhone e no iPad, sempre iguais.</p>
+    <form id="loginForm" novalidate>
+      <label for="email">E-mail</label>
+      <input id="email" class="field" type="email" autocomplete="email" required>
+      <label for="senha">Senha</label>
+      <input id="senha" class="field" type="password" autocomplete="current-password" minlength="6" required>
+      <button class="btn" type="submit">Entrar</button>
+      <button class="btn ghost" type="button" id="criarConta">Criar conta</button>
+      <p class="err" id="loginErr" role="alert"></p>
+    </form>
+  </div>
+</section>
+
+<!-- App -->
+<div id="appView" hidden>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1 class="day" id="day"></h1>
+        <p class="sub" id="count">Carregando…</p>
+      </div>
+      <button class="icon-btn" id="abrirAjustes" aria-label="Ajustes">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </header>
+    <main>
+      <ul id="lista"></ul>
+      <div class="empty" id="vazio" hidden>
+        <strong>Nada pendente.</strong>
+        Toque no microfone e diga o que você precisa lembrar.
+      </div>
+    </main>
+  </div>
+
+  <form class="composer" id="composer" autocomplete="off">
+    <div class="wrap">
+      <input id="entrada" class="field" type="text" placeholder="Escreva ou fale uma tarefa" enterkeyhint="send" aria-label="Nova tarefa">
+      <button class="mic" id="acao" type="button" aria-label="Falar uma tarefa"></button>
+    </div>
+  </form>
+
+  <div class="toast" id="toast" role="status" hidden>
+    <span id="toastMsg"></span>
+    <button type="button" id="toastAcao">Desfazer</button>
+  </div>
+
+  <dialog id="ajustes">
+    <h2>Ajustes</h2>
+    <div class="row">
+      <strong>Lembretes</strong>
+      <p>Às 8h, 13h e 19h, se houver tarefas pendentes.</p>
+      <p class="status" id="notifStatus"></p>
+      <button class="btn" type="button" id="ativarNotif">Ativar lembretes neste aparelho</button>
+    </div>
+    <div class="row">
+      <strong>Widget</strong>
+      <p>Mostra suas tarefas na tela inicial pelo app Scriptable (gratuito).</p>
+      <button class="btn" type="button" id="copiarWidget">Copiar código do widget</button>
+      <button class="btn ghost" type="button" id="trocarChave">Trocar chave do widget</button>
+    </div>
+    <div class="row">
+      <strong>Conta</strong>
+      <p id="contaEmail"></p>
+      <button class="btn ghost" type="button" id="sair">Sair</button>
+    </div>
+    <button class="btn ghost" type="button" id="fecharAjustes">Fechar</button>
+  </dialog>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+<script>
+/* ===== CONFIGURAÇÃO: cole aqui os dados do seu projeto Firebase ===== */
+const firebaseConfig = {
+  apiKey: "AIzaSyB3EZ8zzKpVrOSTFPJAGRYtD_LS9QdXcDA",
+  authDomain: "lembra-4cf32.firebaseapp.com",
+  projectId: "lembra-4cf32",
+  storageBucket: "lembra-4cf32.firebasestorage.app",
+  messagingSenderId: "232760812927",
+  appId: "1:232760812927:web:5fba9b42e83f3b4c21264a"
+};
+const VAPID_KEY = "BNs91XW_1AGxEzdgj1l36dvxwz5lRiwzbdH765UuwMCqjvZy5Op8nEF9BFpudxjXsnVuPQDaYY--pAWU2__ThlA"; // Cloud Messaging > Certificados push da Web
+/* ==================================================================== */
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+db.enablePersistence({ synchronizeTabs: true }).catch(() => {}); // funciona offline
+
+const $ = (id) => document.getElementById(id);
+const ICON_MIC = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4"/></svg>';
+const ICON_STOP = '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
+const ICON_SEND = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+const CHECK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+let uid = null, tarefas = [], pararLista = null;
+const tasksRef = () => db.collection(`users/${uid}/tasks`);
+
+/* ---------- Entrar / sair ---------- */
+const mensagensErro = {
+  "auth/invalid-email": "E-mail inválido.",
+  "auth/invalid-credential": "E-mail ou senha incorretos.",
+  "auth/wrong-password": "E-mail ou senha incorretos.",
+  "auth/user-not-found": "Conta não encontrada. Toque em Criar conta.",
+  "auth/email-already-in-use": "Este e-mail já tem conta. Toque em Entrar.",
+  "auth/weak-password": "A senha precisa de pelo menos 6 caracteres.",
+  "auth/network-request-failed": "Sem internet. Tente de novo."
+};
+function erroLogin(e){ $("loginErr").textContent = mensagensErro[e.code] || "Não foi possível entrar. Tente de novo."; }
+$("loginForm").addEventListener("submit", (ev) => {
+  ev.preventDefault(); $("loginErr").textContent = "";
+  auth.signInWithEmailAndPassword($("email").value.trim(), $("senha").value).catch(erroLogin);
+});
+$("criarConta").addEventListener("click", () => {
+  $("loginErr").textContent = "";
+  auth.createUserWithEmailAndPassword($("email").value.trim(), $("senha").value).catch(erroLogin);
+});
+$("sair").addEventListener("click", () => { $("ajustes").close(); auth.signOut(); });
+
+auth.onAuthStateChanged((user) => {
+  if (pararLista) { pararLista(); pararLista = null; }
+  if (!user) { uid = null; $("appView").hidden = true; $("loginView").hidden = false; return; }
+  uid = user.uid;
+  $("loginView").hidden = true; $("appView").hidden = false;
+  $("contaEmail").textContent = user.email;
+  pararLista = tasksRef().orderBy("createdAt").onSnapshot((snap) => {
+    tarefas = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    render();
+  });
+  atualizarStatusNotif();
+  renovarToken();
+});
+
+/* ---------- Lista ---------- */
+function cabecalho(){
+  const hoje = new Date();
+  const dia = new Intl.DateTimeFormat("pt-BR", { weekday: "long" }).format(hoje);
+  $("day").textContent = dia.charAt(0).toUpperCase() + dia.slice(1);
+  const data = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long" }).format(hoje);
+  const n = tarefas.length;
+  $("count").textContent = data + ", " + (n === 0 ? "tudo em dia" : n === 1 ? "1 pendência" : n + " pendências");
+}
+function render(){
+  cabecalho();
+  const ul = $("lista"); ul.innerHTML = "";
+  tarefas.forEach((t) => {
+    const li = document.createElement("li");
+    const b = document.createElement("button");
+    b.className = "task"; b.type = "button";
+    b.setAttribute("aria-label", "Concluir: " + t.text);
+    b.innerHTML = `<span class="ring">${CHECK}</span><span class="txt"></span>`;
+    b.querySelector(".txt").textContent = t.text;
+    b.addEventListener("click", () => concluir(t, b), { once: true });
+    li.appendChild(b); ul.appendChild(li);
+  });
+  $("vazio").hidden = tarefas.length > 0;
+  atualizarSelo();
+}
+function atualizarSelo(){
+  if (!("setAppBadge" in navigator)) return;
+  const n = tarefas.length;
+  (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
+}
+function adicionar(texto){
+  texto = texto.trim().replace(/\s+/g, " ");
+  if (!texto || !uid) return;
+  texto = texto.charAt(0).toUpperCase() + texto.slice(1);
+  tasksRef().add({ text: texto, createdAt: firebase.firestore.Timestamp.now() });
+}
+function concluir(t, el){
+  el.classList.add("done");
+  if (navigator.vibrate) navigator.vibrate(15);
+  setTimeout(() => {
+    tasksRef().doc(t.id).delete();
+    aviso("Tarefa concluída", () => tasksRef().doc(t.id).set({ text: t.text, createdAt: t.createdAt }));
+  }, 520);
+}
+
+/* ---------- Aviso com desfazer ---------- */
+let timerAviso = null, acaoAviso = null;
+function aviso(msg, desfazer){
+  $("toastMsg").textContent = msg;
+  acaoAviso = desfazer || null;
+  $("toastAcao").hidden = !desfazer;
+  $("toast").hidden = false;
+  clearTimeout(timerAviso);
+  timerAviso = setTimeout(() => { $("toast").hidden = true; acaoAviso = null; }, desfazer ? 5000 : 4000);
+}
+$("toastAcao").addEventListener("click", () => {
+  if (acaoAviso) acaoAviso();
+  acaoAviso = null; $("toast").hidden = true;
+});
+
+/* ---------- Entrada por texto e voz ---------- */
+const entrada = $("entrada"), acao = $("acao");
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, ouvindo = false;
+
+function atualizarBotao(){
+  if (ouvindo) { acao.innerHTML = ICON_STOP; acao.setAttribute("aria-label", "Parar de ouvir"); }
+  else if (entrada.value.trim()) { acao.innerHTML = ICON_SEND; acao.setAttribute("aria-label", "Adicionar tarefa"); }
+  else { acao.innerHTML = ICON_MIC; acao.setAttribute("aria-label", "Falar uma tarefa"); }
+  acao.classList.toggle("listening", ouvindo);
+}
+entrada.addEventListener("input", atualizarBotao);
+$("composer").addEventListener("submit", (ev) => {
+  ev.preventDefault();
+  adicionar(entrada.value); entrada.value = ""; atualizarBotao();
+});
+acao.addEventListener("click", () => {
+  if (ouvindo) { rec && rec.stop(); return; }
+  if (entrada.value.trim()) { adicionar(entrada.value); entrada.value = ""; atualizarBotao(); return; }
+  ouvir();
+});
+
+function ouvir(){
+  if (!SR) {
+    entrada.focus();
+    aviso("Toque no microfone do teclado para ditar.");
+    return;
+  }
+  rec = new SR();
+  rec.lang = "pt-BR"; rec.interimResults = true; rec.continuous = false;
+  let final = "";
+  rec.onresult = (e) => {
+    let parcial = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i];
+      if (r.isFinal) final += r[0].transcript; else parcial += r[0].transcript;
+    }
+    entrada.value = (final + " " + parcial).trim();
+  };
+  rec.onerror = (e) => {
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+      aviso("Sem acesso ao microfone. Use o microfone do teclado.");
+      entrada.focus();
+    }
+  };
+  rec.onend = () => {
+    ouvindo = false; entrada.placeholder = "Escreva ou fale uma tarefa";
+    if (entrada.value.trim()) { adicionar(entrada.value); entrada.value = ""; }
+    atualizarBotao();
+  };
+  try { rec.start(); ouvindo = true; entrada.placeholder = "Ouvindo…"; atualizarBotao(); }
+  catch (_) { ouvindo = false; atualizarBotao(); }
+}
+
+/* ---------- Lembretes (notificações) ---------- */
+const ehIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const instalado = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+
+function atualizarStatusNotif(){
+  const st = $("notifStatus"), btn = $("ativarNotif");
+  btn.hidden = false;
+  if (ehIOS && !instalado) {
+    st.textContent = "Para receber lembretes, adicione o app à Tela de Início (Compartilhar > Adicionar à Tela de Início) e abra por lá.";
+    btn.hidden = true; return;
+  }
+  if (!("Notification" in window)) { st.textContent = "Este navegador não recebe notificações."; btn.hidden = true; return; }
+  if (Notification.permission === "denied") {
+    st.textContent = "Notificações bloqueadas. Libere em Ajustes do iPhone > Notificações > Lembra.";
+    btn.hidden = true; return;
+  }
+  if (Notification.permission === "granted" && localStorage.getItem("lembra-token")) {
+    st.textContent = "Ativados neste aparelho."; btn.hidden = true; return;
+  }
+  st.textContent = "";
+}
+
+async function obterToken(){
+  if (!(await firebase.messaging.isSupported())) throw new Error("sem-suporte");
+  const reg = await navigator.serviceWorker.register("./firebase-messaging-sw.js");
+  await navigator.serviceWorker.ready;
+  const token = await firebase.messaging().getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+  if (!token) throw new Error("sem-token");
+  await db.doc(`users/${uid}/tokens/${token}`).set({
+    createdAt: firebase.firestore.Timestamp.now(),
+    aparelho: ehIOS ? (/iPad/.test(navigator.userAgent) || navigator.maxTouchPoints > 1 && !/iPhone/.test(navigator.userAgent) ? "iPad" : "iPhone") : "outro"
+  });
+  const antigo = localStorage.getItem("lembra-token");
+  if (antigo && antigo !== token) db.doc(`users/${uid}/tokens/${antigo}`).delete().catch(() => {});
+  localStorage.setItem("lembra-token", token);
+}
+
+$("ativarNotif").addEventListener("click", async () => {
+  const st = $("notifStatus");
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") { atualizarStatusNotif(); return; }
+    st.textContent = "Ativando…";
+    await obterToken();
+    atualizarStatusNotif();
+    aviso("Lembretes ativados");
+  } catch (e) {
+    st.textContent = e.message === "sem-suporte"
+      ? "Este aparelho não aceita lembretes. Abra o app pelo ícone da Tela de Início."
+      : "Não foi possível ativar. Confira a internet e tente de novo.";
+  }
+});
+
+// Renova o token em silêncio a cada abertura (eles expiram com o tempo)
+function renovarToken(){
+  if ("Notification" in window && Notification.permission === "granted" && (!ehIOS || instalado)) {
+    obterToken().then(atualizarStatusNotif).catch(() => {});
+  }
+}
+
+/* ---------- Widget (Scriptable) ---------- */
+const APP_URL = location.origin + location.pathname;
+const API_URL = "https://southamerica-east1-" + firebaseConfig.projectId + ".cloudfunctions.net/widget";
+
+function novaChave(){
+  const b = new Uint8Array(24); crypto.getRandomValues(b);
+  return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+}
+async function chaveWidget(trocar){
+  const ref = db.doc(`users/${uid}`);
+  if (!trocar) {
+    const snap = await ref.get();
+    if (snap.exists && snap.get("widgetKey")) return snap.get("widgetKey");
+  }
+  const k = novaChave();
+  await ref.set({ widgetKey: k }, { merge: true });
+  return k;
+}
+function scriptWidget(chave){
+  return `// Lembra: widget para o app Scriptable
+const URL_API = "${API_URL}?key=${chave}";
+const URL_APP = "${APP_URL}";
+
+const fm = FileManager.local();
+const cache = fm.joinPath(fm.documentsDirectory(), "lembra-cache.json");
+let dados;
+try {
+  const r = new Request(URL_API); r.timeoutInterval = 10;
+  dados = await r.loadJSON();
+  if (!Array.isArray(dados.tasks)) throw new Error("resposta");
+  fm.writeString(cache, JSON.stringify(dados));
+} catch (e) {
+  dados = fm.fileExists(cache) ? JSON.parse(fm.readString(cache)) : { count: 0, tasks: [], offline: true };
+}
+
+const fam = config.widgetFamily || "medium";
+const max = { small: 3, medium: 4, large: 11, extraLarge: 11 }[fam] || 4;
+const fundo = Color.dynamic(new Color("#EAEFEC"), new Color("#14191C"));
+const tinta = Color.dynamic(new Color("#1D2830"), new Color("#E4EBE8"));
+const suave = Color.dynamic(new Color("#647379"), new Color("#8A989D"));
+const amarelo = new Color("#F4C21B");
+
+const w = new ListWidget();
+w.backgroundColor = fundo; w.url = URL_APP; w.setPadding(14, 16, 14, 16);
+
+const topo = w.addStack(); topo.centerAlignContent();
+const titulo = topo.addText("Lembra"); titulo.font = Font.boldSystemFont(15); titulo.textColor = tinta;
+topo.addSpacer();
+const n = dados.count;
+if (n > 0) {
+  const selo = topo.addStack(); selo.backgroundColor = amarelo; selo.cornerRadius = 10; selo.setPadding(2, 8, 2, 8);
+  const sn = selo.addText(String(n)); sn.font = Font.boldSystemFont(14); sn.textColor = new Color("#1D2830");
+}
+w.addSpacer(8);
+
+if (n === 0) {
+  const ok = w.addText(dados.offline ? "Sem conexão" : "Tudo em dia");
+  ok.font = Font.mediumSystemFont(fam === "small" ? 15 : 17); ok.textColor = suave;
+} else {
+  dados.tasks.slice(0, max).forEach(function (t) {
+    const linha = w.addStack(); linha.spacing = 6; linha.centerAlignContent();
+    const bola = linha.addText("○"); bola.font = Font.systemFont(13); bola.textColor = suave;
+    const tx = linha.addText(t); tx.font = Font.systemFont(fam === "small" ? 13 : 15); tx.textColor = tinta; tx.lineLimit = 1;
+    w.addSpacer(4);
+  });
+  if (n > max) {
+    const resto = w.addText("+ " + (n - max) + (n - max > 1 ? " outras" : " outra"));
+    resto.font = Font.systemFont(13); resto.textColor = suave;
+  }
+}
+w.addSpacer();
+w.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000);
+
+if (config.runsInWidget) Script.setWidget(w); else await w.presentMedium();
+Script.complete();
+`;
+}
+async function copiarWidget(trocar){
+  try {
+    const chave = await chaveWidget(trocar);
+    await navigator.clipboard.writeText(scriptWidget(chave));
+    aviso(trocar ? "Chave trocada e código copiado. Cole de novo no Scriptable." : "Código copiado. Cole no Scriptable.");
+  } catch (e) {
+    aviso("Não foi possível copiar. Confira a internet e tente de novo.");
+  }
+}
+$("copiarWidget").addEventListener("click", () => copiarWidget(false));
+$("trocarChave").addEventListener("click", () => copiarWidget(true));
+
+$("abrirAjustes").addEventListener("click", () => { atualizarStatusNotif(); $("ajustes").showModal(); });
+$("fecharAjustes").addEventListener("click", () => $("ajustes").close());
+
+// Atualiza a data se o app ficar aberto de um dia para o outro
+document.addEventListener("visibilitychange", () => { if (!document.hidden && uid) cabecalho(); });
+atualizarBotao();
+</script>
+</body>
+</html>
